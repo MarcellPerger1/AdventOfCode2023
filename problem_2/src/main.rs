@@ -13,41 +13,73 @@ struct CubeCount {
 }
 impl CubeCount {
     pub fn just_red(red: u32) -> CubeCount {
-        CubeCount { red, green: 0, blue: 0 }
+        CubeCount {
+            red,
+            green: 0,
+            blue: 0,
+        }
     }
     pub fn just_green(green: u32) -> CubeCount {
-        CubeCount { red: 0, green, blue: 0 }
+        CubeCount {
+            red: 0,
+            green,
+            blue: 0,
+        }
     }
     pub fn just_blue(blue: u32) -> CubeCount {
-        CubeCount { red: 0, green: 0, blue }
+        CubeCount {
+            red: 0,
+            green: 0,
+            blue,
+        }
     }
     pub fn add(self, other: Self) -> Self {
-        CubeCount { red: self.red + other.red, green: self.green + other.green, blue: self.blue + other.blue }
+        CubeCount {
+            red: self.red + other.red,
+            green: self.green + other.green,
+            blue: self.blue + other.blue,
+        }
     }
     pub fn le(self, other: Self) -> bool {
         self.red <= other.red && self.green <= other.green && self.blue <= other.blue
     }
     pub fn max_cubes(self, other: Self) -> Self {
-        CubeCount { red: self.red.max(other.red), green: self.green.max(other.green), blue: self.blue.max(other.blue) }
+        CubeCount {
+            red: self.red.max(other.red),
+            green: self.green.max(other.green),
+            blue: self.blue.max(other.blue),
+        }
     }
     pub fn power(self) -> u32 {
         self.red * self.green * self.blue
     }
 }
 
-
 fn part1() {
-    let cubes_in_bag = CubeCount {red: 12, green: 13, blue: 14};
+    let cubes_in_bag = CubeCount {
+        red: 12,
+        green: 13,
+        blue: 14,
+    };
     let contents =
         fs::read_to_string("./src/input.txt").expect("Should've been able to read the file");
     let lines = contents.lines().map(|x| x.trim()).filter(|x| x.len() > 0);
     let ids = lines.filter_map(|ln| -> Option<usize> {
-        let ln_without_prefix = ln.strip_prefix("Game ").expect("Bad format - Expected 'Game N'");
-        let (id_str, rest) = ln_without_prefix.split_once(":").expect("Bad format - Expected ':'");
-        let id = id_str.trim().parse::<usize>().expect("Bad format - invalid game id number");
+        let ln_without_prefix = ln
+            .strip_prefix("Game ")
+            .expect("Bad format - Expected 'Game N'");
+        let (id_str, rest) = ln_without_prefix
+            .split_once(":")
+            .expect("Bad format - Expected ':'");
+        let id = id_str
+            .trim()
+            .parse::<usize>()
+            .expect("Bad format - invalid game id number");
         let rounds = rest.trim().split_terminator(";");
         let cube_counts = rounds.map(cubes_in_round);
-        let count = cube_counts.reduce(CubeCount::max_cubes).expect("Game should not be empty");
+        let count = cube_counts
+            .reduce(CubeCount::max_cubes)
+            .expect("Game should not be empty");
         println!("{ln} => {count:?}");
         if count.le(cubes_in_bag) {
             Some(id)
@@ -69,10 +101,12 @@ fn cubes_in_round(round: &str) -> CubeCount {
             "red" => CubeCount::just_red(amount),
             "green" => CubeCount::just_green(amount),
             "blue" => CubeCount::just_blue(amount),
-            _ => panic!("Unknown color")
+            _ => panic!("Unknown color"),
         }
     });
-    cube_counts.reduce(CubeCount::add).expect("Expected at least 1 cube")
+    cube_counts
+        .reduce(CubeCount::add)
+        .expect("Expected at least 1 cube")
 }
 
 fn part2() {
@@ -80,12 +114,18 @@ fn part2() {
         fs::read_to_string("./src/input.txt").expect("Should've been able to read the file");
     let lines = contents.lines().map(|x| x.trim()).filter(|x| x.len() > 0);
     let powers = lines.map(|ln| -> u32 {
-        let ln_without_prefix = ln.strip_prefix("Game ").expect("Bad format - Expected 'Game N'");
-        let (_id_str, rest) = ln_without_prefix.split_once(":").expect("Bad format - Expected ':'");
+        let ln_without_prefix = ln
+            .strip_prefix("Game ")
+            .expect("Bad format - Expected 'Game N'");
+        let (_id_str, rest) = ln_without_prefix
+            .split_once(":")
+            .expect("Bad format - Expected ':'");
         // let id = id_str.trim().parse::<usize>().expect("Bad format - invalid game id number");
         let rounds = rest.trim().split_terminator(";");
         let cube_counts = rounds.map(cubes_in_round);
-        let required_cubes = cube_counts.reduce(CubeCount::max_cubes).expect("Game should not be empty");
+        let required_cubes = cube_counts
+            .reduce(CubeCount::max_cubes)
+            .expect("Game should not be empty");
         let power = required_cubes.power();
         println!("{ln} => {required_cubes:?}, power={power}");
         power
