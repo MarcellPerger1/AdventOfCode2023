@@ -80,18 +80,6 @@ fn find_intersecting_on_line(num_idx_list: &Vec<Vec<(usize, usize, u32)>>, line_
 fn part2() {
     let contents = fs::read_to_string("./src/input.txt").expect("Should've been able to read the file");
     let lines: Vec<_> = contents.lines().map(|x| x.trim()).filter(|x| x.len() > 0).collect();
-    let maxlen = lines.iter().map(|ln| ln.len()).max().expect("Expected >= 1 line");
-    let empty_line = ".".repeat(maxlen);
-    let lines_with_padding: Vec<_> = iter::once(empty_line.as_str())
-        .chain(lines.iter().map(|refref| *refref))
-        .chain(iter::once(empty_line.as_str())).collect();
-    let triples = lines_with_padding.windows(3).map(|ln_slice| {
-        if let [prev, curr, next] = ln_slice {
-            (prev, curr, next)
-        } else {
-            unreachable!()
-        }
-    }).collect_vec();
     // println!("{:#?}", triples);
     let num_idx_list: Vec<_> = lines.iter().map(|ln| {
         let numeric_groups = ln
@@ -110,13 +98,13 @@ fn part2() {
             });
         nums_on_this_line.collect::<Vec<_>>()
     }).collect();
-    println!("{:#?}", num_idx_list);
+    // println!("{:#?}", num_idx_list);
     let ratios_on_lines = lines.iter().enumerate().map(|(li, ln)| {
         let star_indices = ln
             .char_indices()
             .filter_map(|(i, c)| if c == '*' { Some(i) } else { None });
         let ratios_list = star_indices.filter_map(|i| {
-            println!("Star: {}:{}", li, i);
+            // println!("Star: {}:{}", li, i);
             let idx_range_top = if i == 0 { (i, i+1) } else { (i-1, i+1) };
             let idx_range_bot = idx_range_top;
             let top_nums = if let Some(prev_i) = li.checked_sub(1) {
@@ -132,7 +120,7 @@ fn part2() {
                 find_intersecting_on_line(&num_idx_list, li+1, idx_range_bot)
             } else { Vec::new() };
             let adj_nums = top_nums.into_iter().chain(prev_nums.into_iter()).chain(next_nums.into_iter()).chain(bot_nums.into_iter()).collect_vec();
-            println!("  {adj_nums:?}");
+            // println!("  {adj_nums:?}");
             (adj_nums.len() == 2).then(|| adj_nums[0] * adj_nums[1])
         });
         ratios_list.sum::<u32>()
