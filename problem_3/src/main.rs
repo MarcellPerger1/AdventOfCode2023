@@ -40,7 +40,7 @@ fn part1() {
                         .chain(iter::once(if first_idx == 0 {'.'} else { curr.chars().nth(first_idx.saturating_sub(1)).unwrap_or('.')}))
                         .chain(iter::once(curr.chars().nth(last_idx + 1).unwrap_or('.')))
                         .chain(bot_adj);
-                    let mut d: Vec<_> = adj.clone().collect();
+                    // let mut d: Vec<_> = adj.clone().collect();
                     // println!("{:?}", d);
                     if adj.any(|c| c != '.') {
                         // num should be counted
