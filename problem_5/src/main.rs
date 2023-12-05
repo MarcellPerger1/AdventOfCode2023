@@ -118,10 +118,13 @@ impl MapLine {
 
     fn priv_apply_range_contained(&self, r: NumRange) -> NumRange {
         let start_offset = r.start - self.src_start;
-        NumRange::new(r.start + start_offset, r.len)
+        NumRange::new(self.dest_start + start_offset, r.len)
     }
 
     fn apply_line_r_list(&self, rlist: Vec<NumRange>) -> Vec<NumRange> {
+        // TODO: this list thing doesn't work: need to apply them in parallel as it will be applied a 2nd time to the intermediate result
+        // e.g. if 10->21 = +15; 20->50: +8 a number in 10->20 has 2 tranformations applied to it which is bad.
+        // Solution: do it separately for each line and somehow merge it
         rlist
             .iter()
             .map(|r| self.apply_line_r(r.to_owned()))
@@ -208,9 +211,12 @@ impl FullMap {
     }
 
     fn apply_map_r(&self, rlist: Vec<NumRange>) -> Vec<NumRange> {
-        self.lines
+        print!("{rlist:#?} ===> ");
+        let r = self.lines
             .iter()
-            .fold(rlist, |prev, mp_line| mp_line.apply_line_r_list(prev))
+            .fold(rlist, |prev, mp_line| mp_line.apply_line_r_list(prev));
+        println!("{:#?}", r);
+        r
     }
 }
 

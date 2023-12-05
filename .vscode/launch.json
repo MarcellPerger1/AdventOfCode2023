@@ -40,6 +40,19 @@
             },
             "args": [],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'AdventOfCode2023/problem_5'",
+            "program": "C:\\Users\\marce\\VSCode_Projects\\AdventOfCode2023\\AdventOfCode2023\\problem_5\\target\\debug\\problem_5.exe",
+            "cargo": {
+                "args": [
+                    "build"
+                ]
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}\\problem_5",
         }
     ]
 }
