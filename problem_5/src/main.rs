@@ -121,10 +121,7 @@ impl MapLine {
         NumRange::new(self.dest_start + start_offset, r.len)
     }
 
-    fn apply_line_r_list(&self, rlist: Vec<NumRange>) -> Vec<NumRange> {
-        // TODO: this list thing doesn't work: need to apply them in parallel as it will be applied a 2nd time to the intermediate result
-        // e.g. if 10->21 = +15; 20->50: +8 a number in 10->20 has 2 tranformations applied to it which is bad.
-        // Solution: do it separately for each line and somehow merge it
+    fn apply_line_r_list(&self, rlist: Vec<NumRange>) -> Vec<(bool, NumRange)> {
         rlist
             .iter()
             .map(|r| self.apply_line_r(r.to_owned()))
@@ -132,18 +129,18 @@ impl MapLine {
             .collect_vec()
     }
 
-    fn apply_line_r(&self, r1: NumRange) -> Vec<NumRange> {
+    fn apply_line_r(&self, r1: NumRange) -> Vec<(bool, NumRange)> {
         self.apply_line_r_inner(r1)
             .into_iter()
-            .filter(|r| r.len > 0)
+            .filter(|r| r.1.len > 0)
             .collect_vec()
     }
 
-    fn apply_line_r_inner(&self, r1: NumRange) -> Vec<NumRange> {
+    fn apply_line_r_inner(&self, r1: NumRange) -> Vec<(bool, NumRange)> { // (changed?, new)
         let rself = self.get_src_range();
         // no intersect so no change
         if !rself.intersects(&r1) {
-            return iter::once(r1).collect();
+            return iter::once((false, r1)).collect();
         }
         // <-- self -->
         //    <-- other -->
@@ -154,7 +151,7 @@ impl MapLine {
             // split other at self.end_incl: left=apply, right, don't
             let left_apply = NumRange::from_incl(r1.start, rself.end_incl());
             let right_same = NumRange::from_incl(rself.end_excl(), r1.end_incl());
-            return vec![self.priv_apply_range_contained(left_apply), right_same];
+            return vec![(true, self.priv_apply_range_contained(left_apply)), (false, right_same)];
         }
         //      <-- self -->
         //  <-- other -->
@@ -165,14 +162,14 @@ impl MapLine {
             // split other at self.end_incl: left=same, right=apply
             let left_same = NumRange::from_excl(r1.start, rself.start);
             let right_apply = NumRange::from_incl(rself.start, r1.end_incl());
-            return vec![left_same, self.priv_apply_range_contained(right_apply)];
+            return vec![(false, left_same), (true, self.priv_apply_range_contained(right_apply))];
         }
         //  <--   self    -->
         //    <-- other -->
         if rself.start <= r1.start && r1.start <= r1.end_incl() && r1.end_incl() <= rself.end_incl()
         {
             // everything is apply
-            return vec![self.priv_apply_range_contained(r1)];
+            return vec![(true, self.priv_apply_range_contained(r1))];
         }
         //     <--self-->
         // <--   other   -->
@@ -184,9 +181,9 @@ impl MapLine {
             let mid_apply = NumRange::from_incl(rself.start, rself.end_incl());
             let right_same = NumRange::from_incl(rself.end_excl(), r1.end_incl());
             return vec![
-                left_same,
-                self.priv_apply_range_contained(mid_apply),
-                right_same,
+                (false, left_same),
+                (true, self.priv_apply_range_contained(mid_apply)),
+                (false, right_same),
             ];
         }
         unreachable!(); // I hope
@@ -211,11 +208,33 @@ impl FullMap {
     }
 
     fn apply_map_r(&self, rlist: Vec<NumRange>) -> Vec<NumRange> {
-        print!("{rlist:#?} ===> ");
-        let r = self.lines
+        // TODO: this list thing doesn't work: need to apply them in parallel as it will be applied a 2nd time to the intermediate result
+        // e.g. if 10->21 = +15; 20->50: +8 a number in 10->20 has 2 tranformations applied to it which is bad.
+        // Solution: do it separately for each line and somehow merge it
+        // SO FAR: apply_line_r_list returns Vec<(changed?, new_r)> TODO: use this
+        // print!("{rlist:#?} ===> ");
+        let (unprocessed_r, done_r) = self.lines
             .iter()
-            .fold(rlist, |prev, mp_line| mp_line.apply_line_r_list(prev));
-        println!("{:#?}", r);
+            .fold((rlist, Vec::<NumRange>::new()), |prev, mp_line| {
+                let (unprocessed, done) = prev;
+
+                let (done_new_x, unprocessed_new_x): (Vec<_>, Vec<_>) = mp_line
+                    .apply_line_r_list(unprocessed)
+                    .into_iter()
+                    .partition(|(is_done, _r)| {
+                        *is_done
+                    });
+                let done_new = done_new_x.into_iter().map(|(_is_done, r)| {
+                    r
+                });
+                let unprocessed_new = unprocessed_new_x.into_iter().map(|(_is_done, r)| {
+                    r
+                });
+                (unprocessed_new.collect(), done.into_iter().chain(done_new).collect())
+            });
+        // unprocessed become done here using a no-op (no line matching = no-op)
+        let r = unprocessed_r.into_iter().chain(done_r.into_iter()).collect_vec();
+        // println!("{:#?}", r);
         r
     }
 }
@@ -305,7 +324,7 @@ fn parse_seeds_line_part2(ln: &str) -> Vec<NumRange> {
 
 fn part2() {
     let contents =
-        fs::read_to_string("./src/example.txt").expect("Should've been able to read the file");
+        fs::read_to_string("./src/input.txt").expect("Should've been able to read the file");
     let lines = contents
         .lines()
         .map(|x| x.trim())
@@ -318,7 +337,7 @@ fn part2() {
         .iter()
         .map(|s| (s.to_owned(), maps.apply_maps_r(vec![s.to_owned()])))
         .collect_vec();
-    println!("{:#?}; \n\n {:#?}", seeds_v, seed_loc_v);
+    // println!("{:#?}; \n\n {:#?}", seeds_v, seed_loc_v);
     // TODO this will work but only because we don't need orig thing only result
     let min_value = seed_loc_v.iter().map(|(_src, dest)| {
         // start is, by definition, the min of a range
