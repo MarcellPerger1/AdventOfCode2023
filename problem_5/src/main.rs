@@ -1,4 +1,3 @@
-#![allow(unused_imports)]
 use itertools::Itertools;
 use std::fs;
 use std::iter;
@@ -64,7 +63,8 @@ impl MapLine {
         }
     }
 }
-// convenience one-line getter
+// convenience one-line getters
+#[allow(dead_code)]
 impl MapLine {
     pub fn get_src_end_excl(&self) -> u64 {
         self.src_start + self.range_len
@@ -136,7 +136,8 @@ impl MapLine {
             .collect_vec()
     }
 
-    fn apply_line_r_inner(&self, r1: NumRange) -> Vec<(bool, NumRange)> { // (changed?, new)
+    fn apply_line_r_inner(&self, r1: NumRange) -> Vec<(bool, NumRange)> {
+        // (changed?, new)
         let rself = self.get_src_range();
         // no intersect so no change
         if !rself.intersects(&r1) {
@@ -151,7 +152,10 @@ impl MapLine {
             // split other at self.end_incl: left=apply, right, don't
             let left_apply = NumRange::from_incl(r1.start, rself.end_incl());
             let right_same = NumRange::from_incl(rself.end_excl(), r1.end_incl());
-            return vec![(true, self.priv_apply_range_contained(left_apply)), (false, right_same)];
+            return vec![
+                (true, self.priv_apply_range_contained(left_apply)),
+                (false, right_same),
+            ];
         }
         //      <-- self -->
         //  <-- other -->
@@ -162,7 +166,10 @@ impl MapLine {
             // split other at self.end_incl: left=same, right=apply
             let left_same = NumRange::from_excl(r1.start, rself.start);
             let right_apply = NumRange::from_incl(rself.start, r1.end_incl());
-            return vec![(false, left_same), (true, self.priv_apply_range_contained(right_apply))];
+            return vec![
+                (false, left_same),
+                (true, self.priv_apply_range_contained(right_apply)),
+            ];
         }
         //  <--   self    -->
         //    <-- other -->
@@ -213,27 +220,28 @@ impl FullMap {
         // Solution: do it separately for each line and somehow merge it
         // SO FAR: apply_line_r_list returns Vec<(changed?, new_r)> TODO: use this
         // print!("{rlist:#?} ===> ");
-        let (unprocessed_r, done_r) = self.lines
-            .iter()
-            .fold((rlist, Vec::<NumRange>::new()), |prev, mp_line| {
-                let (unprocessed, done) = prev;
+        let (unprocessed_r, done_r) =
+            self.lines
+                .iter()
+                .fold((rlist, Vec::<NumRange>::new()), |prev, mp_line| {
+                    let (unprocessed, done) = prev;
 
-                let (done_new_x, unprocessed_new_x): (Vec<_>, Vec<_>) = mp_line
-                    .apply_line_r_list(unprocessed)
-                    .into_iter()
-                    .partition(|(is_done, _r)| {
-                        *is_done
-                    });
-                let done_new = done_new_x.into_iter().map(|(_is_done, r)| {
-                    r
+                    let (done_new_x, unprocessed_new_x): (Vec<_>, Vec<_>) = mp_line
+                        .apply_line_r_list(unprocessed)
+                        .into_iter()
+                        .partition(|(is_done, _r)| *is_done);
+                    let done_new = done_new_x.into_iter().map(|(_is_done, r)| r);
+                    let unprocessed_new = unprocessed_new_x.into_iter().map(|(_is_done, r)| r);
+                    (
+                        unprocessed_new.collect(),
+                        done.into_iter().chain(done_new).collect(),
+                    )
                 });
-                let unprocessed_new = unprocessed_new_x.into_iter().map(|(_is_done, r)| {
-                    r
-                });
-                (unprocessed_new.collect(), done.into_iter().chain(done_new).collect())
-            });
         // unprocessed become done here using a no-op (no line matching = no-op)
-        let r = unprocessed_r.into_iter().chain(done_r.into_iter()).collect_vec();
+        let r = unprocessed_r
+            .into_iter()
+            .chain(done_r.into_iter())
+            .collect_vec();
         // println!("{:#?}", r);
         r
     }
@@ -339,9 +347,16 @@ fn part2() {
         .collect_vec();
     // println!("{:#?}; \n\n {:#?}", seeds_v, seed_loc_v);
     // TODO this will work but only because we don't need orig thing only result
-    let min_value = seed_loc_v.iter().map(|(_src, dest)| {
-        // start is, by definition, the min of a range
-        dest.iter().min_by_key(|r| r.start).expect("Expected non-zero dest").start
-    }).min().expect("Should have non-empty seed_loc_v");
+    let min_value = seed_loc_v
+        .iter()
+        .map(|(_src, dest)| {
+            // start is, by definition, the min of a range
+            dest.iter()
+                .min_by_key(|r| r.start)
+                .expect("Expected non-zero dest")
+                .start
+        })
+        .min()
+        .expect("Should have non-empty seed_loc_v");
     println!("Part2: {}", min_value);
 }
