@@ -4,6 +4,7 @@
         ".\\problem_2\\Cargo.toml",
         ".\\problem_3\\Cargo.toml",
         ".\\problem_4\\Cargo.toml",
-        ".\\problem_5\\Cargo.toml"
+        ".\\problem_5\\Cargo.toml",
+        ".\\problem_6\\Cargo.toml"
     ]
 }
