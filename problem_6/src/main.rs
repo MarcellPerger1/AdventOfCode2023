@@ -27,7 +27,7 @@ fn get_race_range((time, record_dist): (u64, u64)) -> (u64, u64) {
     // t_h >= 0 and
     // [ --T - sqrt((-T)^2 - 4*1*S_r) ] / 2*1 < t_h < [ --T + sqrt((-T)^2 - 4*1*S_r) ] / 2*1
     // [T - sqrt(T^2 - 4*S_r)] / 2 < t_h < [T + sqrt(T^2 - 4*S_r)]
-    if let Some(discriminant) = (time*time).checked_sub(4*record_dist) {
+    if let Some(discriminant) = (time * time).checked_sub(4 * record_dist) {
         let d_f64 = discriminant as f64;
         let time_f64 = time as f64;
         let sqrt_d = d_f64.sqrt();
@@ -61,8 +61,16 @@ fn part1() {
         .map(|x| x.trim())
         .filter(|x| x.len() > 0)
         .collect_vec();
-    let times = parse_num_list(lines[0].strip_prefix("Time: ").expect("line 1 should be 'Time: '"));
-    let dists = parse_num_list(lines[1].strip_prefix("Distance: ").expect("line 2 should be 'Distance: '"));
+    let times = parse_num_list(
+        lines[0]
+            .strip_prefix("Time: ")
+            .expect("line 1 should be 'Time: '"),
+    );
+    let dists = parse_num_list(
+        lines[1]
+            .strip_prefix("Distance: ")
+            .expect("line 2 should be 'Distance: '"),
+    );
     let td_vec = times.zip(dists).collect_vec();
     let moe = td_vec.iter().map(|r| get_race_moe(*r)).collect_vec();
     // println!("{:#?};\n {:#?}", td_vec, moe);
