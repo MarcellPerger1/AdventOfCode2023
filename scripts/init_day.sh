@@ -14,4 +14,3 @@ cargo new "$1" || exit 1
 cd "$1" || exit 1
 cargo add itertools regex || exit 1
 cargo run
-cd ..

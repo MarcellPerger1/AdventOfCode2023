@@ -6,7 +6,8 @@
         ".\\problem_4\\Cargo.toml",
         ".\\problem_5\\Cargo.toml",
         ".\\problem_6\\Cargo.toml",
-        ".\\problem_7\\Cargo.toml"
+        ".\\problem_7\\Cargo.toml",
+        ".\\problem_8\\Cargo.toml"
     ],
     "shellcheck.exclude": [
         "1017"
