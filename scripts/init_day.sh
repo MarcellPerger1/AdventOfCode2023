@@ -12,5 +12,7 @@ fi
 
 cargo new "$1" || exit 1
 cd "$1" || exit 1
-cargo add itertools regex || exit 1
+cargo add itertools regex num || exit 1
+# build packages in both debug and release mode
 cargo run
+cargo run -r
