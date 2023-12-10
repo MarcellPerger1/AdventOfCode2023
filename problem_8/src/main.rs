@@ -1,10 +1,8 @@
 use itertools::Itertools;
 use itertools::FoldWhile;
 use std::collections::HashMap;
-use std::collections::HashSet;
+// use std::collections::HashSet;
 use std::fs;
-use std::iter;
-use std::cmp;
 use num::Integer;
 
 fn main() {
@@ -17,14 +15,14 @@ enum Instruction {
     Left,
     Right
 }
-impl Instruction {
-    fn idx_tuple<T>(self, tp: (T, T)) -> T {
-        match self {
-            Self::Left => tp.0,
-            Self::Right => tp.1
-        }
-    }
-}
+// impl Instruction {
+//     fn idx_tuple<T>(self, tp: (T, T)) -> T {
+//         match self {
+//             Self::Left => tp.0,
+//             Self::Right => tp.1
+//         }
+//     }
+// }
 
 fn parse_instructions(ln: &str) -> Vec<Instruction> {
     ln.trim().chars().map(|c| {
@@ -85,102 +83,102 @@ fn part1() {
     println!("Part1: {}", amount);
 }
 
-fn is_all_end(names: &Vec<&String>) -> bool {
-    names.iter().all(|k| k.chars().last().expect("Expected non-null name") == 'Z')
-}
+// fn is_all_end(names: &Vec<&String>) -> bool {
+//     names.iter().all(|k| k.chars().last().expect("Expected non-null name") == 'Z')
+// }
 
 fn is_end(name: &String) -> bool {
     name.chars().last().expect("Expected non-null name") == 'Z'
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct NodeI {
-    out: (u16, u16)
-}
-impl NodeI {
-    fn new2(left: u16, right: u16) -> Self {
-        Self { out: (left, right) }
-    }
-}
-impl Default for NodeI {
-    fn default() -> Self {
-        Self { out: (u16::MAX, u16::MAX) }
-    }
-}
+// #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+// struct NodeI {
+//     out: (u16, u16)
+// }
+// impl NodeI {
+//     fn new2(left: u16, right: u16) -> Self {
+//         Self { out: (left, right) }
+//     }
+// }
+// impl Default for NodeI {
+//     fn default() -> Self {
+//         Self { out: (u16::MAX, u16::MAX) }
+//     }
+// }
 
-fn make_inodes(nodes: HashMap<String, Node>) -> (Vec<NodeI>, HashMap<String, u16>) {
-    let mut str_to_i: HashMap<String, u16> = HashMap::new();
-    let mut next_i = 0_u16;
-    let mut get_or_insert_k = |s: String| -> u16 {
-        if let Some(i) = str_to_i.get(&s) {
-            return *i;
-        }
-        let curr_i = next_i;
-        str_to_i.insert(s, curr_i);
-        next_i += 1;
-        curr_i
-    };
-    let kv_pairs_vec = nodes.into_iter().map(|(k, v)|{
-        let k_new = get_or_insert_k(k);
-        let left = get_or_insert_k(v.out.0);
-        let right = get_or_insert_k(v.out.1);
-        (k_new, NodeI::new2(left, right))
-    }).collect_vec();
-    let mut v = [NodeI::default()].repeat(next_i as _);
-    for (i, r) in kv_pairs_vec {
-        v[i as usize] = r;
-    }
-    (v, str_to_i)
-}
+// fn make_inodes(nodes: HashMap<String, Node>) -> (Vec<NodeI>, HashMap<String, u16>) {
+//     let mut str_to_i: HashMap<String, u16> = HashMap::new();
+//     let mut next_i = 0_u16;
+//     let mut get_or_insert_k = |s: String| -> u16 {
+//         if let Some(i) = str_to_i.get(&s) {
+//             return *i;
+//         }
+//         let curr_i = next_i;
+//         str_to_i.insert(s, curr_i);
+//         next_i += 1;
+//         curr_i
+//     };
+//     let kv_pairs_vec = nodes.into_iter().map(|(k, v)|{
+//         let k_new = get_or_insert_k(k);
+//         let left = get_or_insert_k(v.out.0);
+//         let right = get_or_insert_k(v.out.1);
+//         (k_new, NodeI::new2(left, right))
+//     }).collect_vec();
+//     let mut v = [NodeI::default()].repeat(next_i as _);
+//     for (i, r) in kv_pairs_vec {
+//         v[i as usize] = r;
+//     }
+//     (v, str_to_i)
+// }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct FlatNode {
-    next_i: u32
-}
+// #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+// struct FlatNode {
+//     next_i: u32
+// }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct INodeWithIdx {
-    out: (u16, u16),
-    instr_i: u16
-}
-impl INodeWithIdx {
-    fn new(out: (u16, u16), instr_i: u16) -> Self {
-        Self { out, instr_i }
-    }
+// #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+// struct INodeWithIdx {
+//     out: (u16, u16),
+//     instr_i: u16
+// }
+// impl INodeWithIdx {
+//     fn new(out: (u16, u16), instr_i: u16) -> Self {
+//         Self { out, instr_i }
+//     }
 
-    fn as_inode(self) -> NodeI {
-        NodeI { out: self.out }
-    }
-}
+//     fn as_inode(self) -> NodeI {
+//         NodeI { out: self.out }
+//     }
+// }
 
-fn find_chain(inodes: &Vec<NodeI>, instr_list: &Vec<Instruction>, start: usize) -> Vec<INodeWithIdx> {
-    let mut visited: HashSet<INodeWithIdx> = HashSet::new();
-    let mut nd_chain: Vec<INodeWithIdx> = vec![];
-    let (_repeated_nd, _cycle_len) = instr_list
-        .iter()
-        .enumerate()
-        .cycle()
-        .fold_while((inodes[start], 0_u64), |(curr_v, n), (ii, instr)| {
-            let new_nd = INodeWithIdx::new(curr_v.out, ii as u16);
-            if visited.contains(&new_nd) { return FoldWhile::Done((curr_v, n)); }
-            nd_chain.push(new_nd);
-            visited.insert(new_nd);
-            let next_nd = inodes[instr.idx_tuple(curr_v.out) as usize];
-            FoldWhile::Continue((next_nd, n+1))
-        }).into_inner();
-    nd_chain
-}
+// fn find_chain(inodes: &Vec<NodeI>, instr_list: &Vec<Instruction>, start: usize) -> Vec<INodeWithIdx> {
+//     let mut visited: HashSet<INodeWithIdx> = HashSet::new();
+//     let mut nd_chain: Vec<INodeWithIdx> = vec![];
+//     let (_repeated_nd, _cycle_len) = instr_list
+//         .iter()
+//         .enumerate()
+//         .cycle()
+//         .fold_while((inodes[start], 0_u64), |(curr_v, n), (ii, instr)| {
+//             let new_nd = INodeWithIdx::new(curr_v.out, ii as u16);
+//             if visited.contains(&new_nd) { return FoldWhile::Done((curr_v, n)); }
+//             nd_chain.push(new_nd);
+//             visited.insert(new_nd);
+//             let next_nd = inodes[instr.idx_tuple(curr_v.out) as usize];
+//             FoldWhile::Continue((next_nd, n+1))
+//         }).into_inner();
+//     nd_chain
+// // }
 
-fn find_stop_indices(nd_chain: &Vec<INodeWithIdx>, stop_nodes: Vec<NodeI>) -> Vec<usize> {
-    nd_chain.iter().enumerate().filter_map(|(i, n2)| stop_nodes.contains(&n2.as_inode()).then_some(i)).collect_vec()
-}
-fn transform_to_inode_idxs(nodes: &Vec<&String>, str_to_idx: &HashMap<String, u16>) -> Vec<u16> {
-    nodes.iter().map(|s| *str_to_idx.get(*s).expect("Expected valid node")).collect_vec()
-}
+// fn find_stop_indices(nd_chain: &Vec<INodeWithIdx>, stop_nodes: Vec<NodeI>) -> Vec<usize> {
+//     nd_chain.iter().enumerate().filter_map(|(i, n2)| stop_nodes.contains(&n2.as_inode()).then_some(i)).collect_vec()
+// }
+// fn transform_to_inode_idxs(nodes: &Vec<&String>, str_to_idx: &HashMap<String, u16>) -> Vec<u16> {
+//     nodes.iter().map(|s| *str_to_idx.get(*s).expect("Expected valid node")).collect_vec()
+// }
 
-fn get_chains(inodes: &Vec<NodeI>, instr_list: &Vec<Instruction>, start_idxs: &Vec<u16>) -> Vec<Vec<INodeWithIdx>> {
-    start_idxs.iter().map(|start| find_chain(inodes, instr_list, *start as _)).collect_vec()
-}
+// fn get_chains(inodes: &Vec<NodeI>, instr_list: &Vec<Instruction>, start_idxs: &Vec<u16>) -> Vec<Vec<INodeWithIdx>> {
+//     start_idxs.iter().map(|start| find_chain(inodes, instr_list, *start as _)).collect_vec()
+// }
 
 fn part2() {
     let contents =
