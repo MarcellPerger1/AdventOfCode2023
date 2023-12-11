@@ -5,6 +5,7 @@ use std::mem;
 
 fn main() {
     part1();
+    part2();
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -194,5 +195,21 @@ fn part1() {
     // println!("{:?}", dist_map);
     let m = dist_map.into_iter().max_by_key(|(_pos, dist)| *dist).unwrap();
     println!("Part 1: {} at {:?}", m.1, m.0);
-    // TODO
+}
+
+fn part2() {
+    let contents =
+        fs::read_to_string("./src/input.txt").expect("Should've been able to read the file");
+    let dist_map = get_loop_dists(&contents);
+    // TODO: simple solution
+    // 1. replace all non-loop places with .
+    // 2. Split each cell into 3x3 cell of . (empty) and # (occupied)
+    // e.g. L =>
+    // .#.
+    // .##
+    // ...
+    // 3. Find a dot on the outside, mark it as out
+    // 4. REcursively BFS its neightbours, put reachable places into list
+    // 5. Set inside = ALL - loop - outside
+    // 6. Return inside
 }
