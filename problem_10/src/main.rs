@@ -1,8 +1,6 @@
-use itertools::FoldWhile;
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::fs;
-use std::iter;
 use std::mem;
 
 fn main() {
@@ -89,15 +87,6 @@ impl Pos {
         grid[self.lni][self.xi]
     }
 
-    fn add_dirn_unsafe(self, dirn: Dirn) -> Self {
-        use Dirn::*;
-        match dirn {
-            N => Self { lni: self.lni - 1, xi: self.xi },
-            S => Self { lni: self.lni + 1, xi: self.xi },
-            E => Self { lni: self.lni, xi: self.xi + 1 },
-            W => Self { lni: self.lni, xi: self.xi - 1 }
-        }
-    }
     fn add_dirn(self, dirn: Dirn, gsize: Pos) -> Result<Self, &'static str> {
         use Dirn::*;
         let Self {lni, xi} = self;
@@ -178,9 +167,7 @@ fn handle_next_node(grid: &Vec<Vec<TileType>>, curr_info: &mut ((Dirn, Pos), usi
     LoopControl::Continue
 }
 
-fn part1() {
-    let contents =
-        fs::read_to_string("./src/input.txt").expect("Should've been able to read the file");
+fn get_loop_dists(contents: &String) -> HashMap<Pos, usize> {
     let lines = contents
         .lines()
         .map(|x| x.trim())
@@ -197,6 +184,13 @@ fn part1() {
         if handle_next_node(&grid, &mut curr[0], &mut dist_map, gsize) == LoopControl::Break { break; }
         if handle_next_node(&grid, &mut curr[1], &mut dist_map, gsize) == LoopControl::Break { break; }
     }
+    dist_map
+}
+
+fn part1() {
+    let contents =
+        fs::read_to_string("./src/input.txt").expect("Should've been able to read the file");
+    let dist_map = get_loop_dists(&contents);
     // println!("{:?}", dist_map);
     let m = dist_map.into_iter().max_by_key(|(_pos, dist)| *dist).unwrap();
     println!("Part 1: {} at {:?}", m.1, m.0);
