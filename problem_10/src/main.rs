@@ -290,7 +290,11 @@ fn part2() {
                     dist_map
                         .contains_key(&Pos::from_ln_x(lni, xi))
                         // replace start with appropriate tile
-                        .then_some(if t == TileType::Start { start_tile_is } else { t })
+                        .then_some(if t == TileType::Start {
+                            start_tile_is
+                        } else {
+                            t
+                        })
                         .unwrap_or_default()
                 })
                 .collect_vec()
@@ -302,21 +306,33 @@ fn part2() {
     // 2. For each space, check how many vertical boundary tiles are to its left (only count one that spearate the top half of the tile)
     //      if num changes is even, outside. Else, inside. Because each boundary change MUST mean a change in in/out-ness
     //      so even (0, 2, etc.) means out as 0 is out (and odd means in as 1 is in)
-    //    This is like casting a ray left from a point in the top half of the tile, 
+    //    This is like casting a ray left from a point in the top half of the tile,
     //      and counting the intersections to determine if a point is inside any polygon.
-    let sum_inside = new_grid.iter().map(|ln| {
-        let (_, sum) = ln.iter().fold((/*is_inside*/false, /*sum so far=0*/0), |(prev_is_inside, prev_sum), curr_tile| {
-            use TileType::*;
-            match curr_tile {
-                Nothing => (prev_is_inside, prev_sum + if prev_is_inside {1} else {0}),
-                Start => panic!("Start tile should've been filtered out"),
-                // tile with a boundary at the top
-                PipeVert | PipeNE | PipeNW => (/*crossed a boundary so invert inside-ness*/!prev_is_inside, prev_sum),
-                // explicityly show pipe without top boundary to check none missing
-                PipeHoriz | PipeSE | PipeSW => (prev_is_inside, prev_sum)
-            }
-        });
-        sum
-    }).sum::<i64>();
+    let sum_inside = new_grid
+        .iter()
+        .map(|ln| {
+            let (_, sum) = ln.iter().fold(
+                (/*is_inside*/ false, /*sum so far=0*/ 0),
+                |(prev_is_inside, prev_sum), curr_tile| {
+                    use TileType::*;
+                    match curr_tile {
+                        Nothing => (
+                            prev_is_inside,
+                            prev_sum + if prev_is_inside { 1 } else { 0 },
+                        ),
+                        Start => panic!("Start tile should've been filtered out"),
+                        // tile with a boundary at the top
+                        PipeVert | PipeNE | PipeNW => (
+                            /*crossed a boundary so invert inside-ness*/ !prev_is_inside,
+                            prev_sum,
+                        ),
+                        // explicitly show pipe without top boundary to check none missing
+                        PipeHoriz | PipeSE | PipeSW => (prev_is_inside, prev_sum),
+                    }
+                },
+            );
+            sum
+        })
+        .sum::<i64>();
     println!("Part 2: {}", sum_inside);
 }
