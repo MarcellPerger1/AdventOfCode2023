@@ -279,6 +279,7 @@ fn part2() {
     let contents =
         fs::read_to_string("./src/input.txt").expect("Should've been able to read the file");
     let (grid, dist_map, start_tile_is) = get_loop_dists(&contents);
+    // 1. Remove non-loop 'junk' tiles and replace start with appropriate normal tile
     let new_grid = grid
         .into_iter()
         .enumerate()
@@ -295,28 +296,27 @@ fn part2() {
                 .collect_vec()
         })
         .collect_vec();
-    
-    
-    // TODO: simple solution
-    // 1. replace all non-loop places with .
-    // 2. Split each cell into 3x3 cell of . (empty) and # (occupied)
-    // e.g. L =>
-    // .#.
-    // .##
-    // ...
-    // 3. Find a dot on the outside, mark it as out
-    // 4. REcursively BFS its neightbours, put reachable places into list
-    // 5. Set inside = ALL - loop - outside
-    // 6. Return inside
-    // OR:
-    // split each tile into 4 areas (NE, SE, SW, NW)
+    // So here '.' means not part of the loop
 
     // NOTE: A line will always be on a boundary
-
-    // THIS ONE: vvv
-    // OR: the generic (and simpler approach):
-    // for each space, check how many vertical boundary tiles are to its left (only count one that spearate the top half of the tile)
-    // if no. changes is even, outside. Else, inside. Because each boundary change s MUST mean a change in in/out-ness 
-    // so even (0, 2, etc.) means out as 0 is out
-    // This is like casting a ray left from a the top half of the tile, and counting the intersections to determine if a point is inside any polygon.
+    // 2. For each space, check how many vertical boundary tiles are to its left (only count one that spearate the top half of the tile)
+    //      if num changes is even, outside. Else, inside. Because each boundary change MUST mean a change in in/out-ness
+    //      so even (0, 2, etc.) means out as 0 is out (and odd means in as 1 is in)
+    //    This is like casting a ray left from a point in the top half of the tile, 
+    //      and counting the intersections to determine if a point is inside any polygon.
+    let sum_inside = new_grid.iter().map(|ln| {
+        let (_, sum) = ln.iter().fold((/*is_inside*/false, /*sum so far=0*/0), |(prev_is_inside, prev_sum), curr_tile| {
+            use TileType::*;
+            match curr_tile {
+                Nothing => (prev_is_inside, prev_sum + if prev_is_inside {1} else {0}),
+                Start => panic!("Start tile should've been filtered out"),
+                // tile with a boundary at the top
+                PipeVert | PipeNE | PipeNW => (/*crossed a boundary so invert inside-ness*/!prev_is_inside, prev_sum),
+                // explicityly show pipe without top boundary to check none missing
+                PipeHoriz | PipeSE | PipeSW => (prev_is_inside, prev_sum)
+            }
+        });
+        sum
+    }).sum::<i64>();
+    println!("Part 2: {}", sum_inside);
 }
