@@ -8,9 +8,12 @@ fn main() {
     part2();
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum Dirn {
-    N, E, S, W
+    N,
+    E,
+    S,
+    W,
 }
 impl Dirn {
     fn opp(self) -> Self {
@@ -33,7 +36,12 @@ enum TileType {
     PipeSW,
     PipeSE,
     Nothing,
-    Start
+    Start,
+}
+impl Default for TileType {
+    fn default() -> Self {
+        Self::Nothing
+    }
 }
 impl TileType {
     fn from_char(c: char) -> Self {
@@ -46,7 +54,7 @@ impl TileType {
             'F' => Self::PipeSE,
             '.' => Self::Nothing,
             'S' => Self::Start,
-            _ => panic!("Bad char value to TileType::from_char")
+            _ => panic!("Bad char value to TileType::from_char"),
         }
     }
 
@@ -60,7 +68,21 @@ impl TileType {
             Self::PipeNE => Some([N, E]),
             Self::PipeSW => Some([S, W]),
             Self::PipeSE => Some([S, E]),
-            Self::Nothing | Self::Start => None
+            Self::Nothing | Self::Start => None,
+        }
+    }
+
+    fn from_connector_pair(mut pair: [Dirn; 2]) -> Self {
+        pair.sort_unstable();
+        use Dirn::*;
+        match pair {
+            [N, S] => Self::PipeVert,
+            [N, E] => Self::PipeNE,
+            [N, W] => Self::PipeNW,
+            [E, S] => Self::PipeSE,
+            [E, W] => Self::PipeVert,
+            [S, W] => Self::PipeSW,
+            _ => panic!("Unknown connector pair"),
         }
     }
 
@@ -68,16 +90,15 @@ impl TileType {
         match self {
             Self::Nothing => false,
             Self::Start => true,
-            _ => self.get_connector_pair().unwrap().contains(&dirn)
+            _ => self.get_connector_pair().unwrap().contains(&dirn),
         }
     }
 }
 
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct Pos {
     lni: usize,
-    xi: usize
+    xi: usize,
 }
 impl Pos {
     fn from_ln_x(lni: usize, xi: usize) -> Self {
@@ -90,12 +111,24 @@ impl Pos {
 
     fn add_dirn(self, dirn: Dirn, gsize: Pos) -> Result<Self, &'static str> {
         use Dirn::*;
-        let Self {lni, xi} = self;
+        let Self { lni, xi } = self;
         match dirn {
-            N => self.lni.checked_sub(1).and_then(|lni| Some(Self {lni, xi})).ok_or("Cannot access N direction (outside of the map)"),
-            S => (lni + 1 < gsize.lni).then_some(Self { lni: lni + 1, xi }).ok_or("Cannot access S direction (outside of the map)"),
-            E => (xi + 1 < gsize.xi).then_some(Self { lni, xi: xi + 1 }).ok_or("Cannot access E direction (outside of the map)"),
-            W => self.xi.checked_sub(1).and_then(|xi| Some(Self {lni, xi})).ok_or("Cannot access W direction (outside of the map)")
+            N => self
+                .lni
+                .checked_sub(1)
+                .and_then(|lni| Some(Self { lni, xi }))
+                .ok_or("Cannot access N direction (outside of the map)"),
+            S => (lni + 1 < gsize.lni)
+                .then_some(Self { lni: lni + 1, xi })
+                .ok_or("Cannot access S direction (outside of the map)"),
+            E => (xi + 1 < gsize.xi)
+                .then_some(Self { lni, xi: xi + 1 })
+                .ok_or("Cannot access E direction (outside of the map)"),
+            W => self
+                .xi
+                .checked_sub(1)
+                .and_then(|xi| Some(Self { lni, xi }))
+                .ok_or("Cannot access W direction (outside of the map)"),
         }
     }
 
@@ -105,14 +138,16 @@ impl Pos {
         if self.lni > 0 {
             out.push((Dirn::N, Pos::from_ln_x(self.lni - 1, self.xi)));
         }
-        if self.lni < last_pos_incl.lni {  // if this isn't last
+        if self.lni < last_pos_incl.lni {
+            // if this isn't last
             out.push((Dirn::S, Pos::from_ln_x(self.lni + 1, self.xi)));
         }
         if self.xi > 0 {
-            out.push((Dirn::W, Pos::from_ln_x(self.lni, self.xi -1)));
+            out.push((Dirn::W, Pos::from_ln_x(self.lni, self.xi - 1)));
         }
-        if self.xi < last_pos_incl.xi {  // if this isn't last
-            out.push((Dirn::E, Pos::from_ln_x(self.lni, self.xi +1)));
+        if self.xi < last_pos_incl.xi {
+            // if this isn't last
+            out.push((Dirn::E, Pos::from_ln_x(self.lni, self.xi + 1)));
         }
         out
     }
@@ -123,84 +158,145 @@ fn parse_line(ln: &str) -> Vec<TileType> {
 }
 
 fn find_start(grid: &Vec<Vec<TileType>>) -> Pos {
-    grid.iter().enumerate().find_map(|(lni, ln)| {
-        ln.iter().enumerate().find_map(|(xi, t)| (*t == TileType::Start).then_some(Pos::from_ln_x(lni, xi)))
-    }).expect("Grid should contain a start")
+    grid.iter()
+        .enumerate()
+        .find_map(|(lni, ln)| {
+            ln.iter()
+                .enumerate()
+                .find_map(|(xi, t)| (*t == TileType::Start).then_some(Pos::from_ln_x(lni, xi)))
+        })
+        .expect("Grid should contain a start")
 }
 
 // "always two [connecting tiles] there are, no more, no less"
-fn find_connecting_to_start(grid: &Vec<Vec<TileType>>, start_pos: Pos, gsize: Pos) -> [(Dirn, Pos); 2] {
-    start_pos.get_adj_and_dirn(gsize)
+fn find_connecting_to_start(
+    grid: &Vec<Vec<TileType>>,
+    start_pos: Pos,
+    gsize: Pos,
+) -> [(Dirn, Pos); 2] {
+    start_pos
+        .get_adj_and_dirn(gsize)
         .into_iter()
-        .filter_map(|(dirn_from_start, pos)| pos.index_in(grid).has_connector(dirn_from_start.opp()).then_some((dirn_from_start, pos)))
+        .filter_map(|(dirn_from_start, pos)| {
+            pos.index_in(grid)
+                .has_connector(dirn_from_start.opp())
+                .then_some((dirn_from_start, pos))
+        })
         .collect_vec()
         .try_into()
         .expect("always two [connection to the start] there are, no more, no less")
 }
 
-fn find_next(grid: &Vec<Vec<TileType>>, (dirn_from_prev, pos): (Dirn, Pos), gsize: Pos) -> (Dirn, Pos) {
+fn find_next(
+    grid: &Vec<Vec<TileType>>,
+    (dirn_from_prev, pos): (Dirn, Pos),
+    gsize: Pos,
+) -> (Dirn, Pos) {
     let dirn_to_prev = dirn_from_prev.opp();
     let curr_tile = pos.index_in(grid);
-    let curr_connectors = curr_tile.get_connector_pair().expect("find_next should only be called on a normal tile");
-    let dirn_to_next = curr_connectors.iter().copied().filter(|c| *c != dirn_to_prev).exactly_one()
+    let curr_connectors = curr_tile
+        .get_connector_pair()
+        .expect("find_next should only be called on a normal tile");
+    let dirn_to_next = curr_connectors
+        .iter()
+        .copied()
+        .filter(|c| *c != dirn_to_prev)
+        .exactly_one()
         .expect("Each connector should have 2 connections: 1 to the prev, 1 to next");
-    // println!("find_next: {:?};   {:?}", dirn_to_next, pos); 
-    let next_pos = pos.add_dirn(dirn_to_next, gsize).expect("Error: pipe is pointing out of map");
+    // println!("find_next: {:?};   {:?}", dirn_to_next, pos);
+    let next_pos = pos
+        .add_dirn(dirn_to_next, gsize)
+        .expect("Error: pipe is pointing out of map");
     (dirn_to_next, next_pos)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum LoopControl {
-    Continue, Break
+    Continue,
+    Break,
 }
 
-#[must_use="Should check to end loop or not"]
-fn handle_next_node(grid: &Vec<Vec<TileType>>, curr_info: &mut ((Dirn, Pos), usize), dist_map: &mut HashMap<Pos, usize>, gsize: Pos) -> LoopControl {
+#[must_use = "Should check to end loop or not"]
+fn handle_next_node(
+    grid: &Vec<Vec<TileType>>,
+    curr_info: &mut ((Dirn, Pos), usize),
+    dist_map: &mut HashMap<Pos, usize>,
+    gsize: Pos,
+) -> LoopControl {
     // println!("{:?};   {:?};   {:?}", curr_info, dist_map, gsize);
     // this mem::replace is sorta hacky but whatev
-    let _ = mem::replace(curr_info, (find_next(&grid, curr_info.0, gsize), curr_info.1 + 1));
+    let _ = mem::replace(
+        curr_info,
+        (find_next(&grid, curr_info.0, gsize), curr_info.1 + 1),
+    );
     // if it is in, already found by traversing other so finished, ...
-    if dist_map.contains_key(&curr_info.0.1) {
+    if dist_map.contains_key(&curr_info.0 .1) {
         return LoopControl::Break;
     }
     // ... else, add it and continue
-    dist_map.insert(curr_info.0.1, curr_info.1);
+    dist_map.insert(curr_info.0 .1, curr_info.1);
     LoopControl::Continue
 }
 
-fn get_loop_dists(contents: &String) -> HashMap<Pos, usize> {
-    let lines = contents
-        .lines()
-        .map(|x| x.trim())
-        .filter(|x| x.len() > 0);
+// -> (grid, dist_map, start_tile)
+fn get_loop_dists(contents: &String) -> (Vec<Vec<TileType>>, HashMap<Pos, usize>, TileType) {
+    let lines = contents.lines().map(|x| x.trim()).filter(|x| x.len() > 0);
     let grid = lines.map(parse_line).collect_vec();
     // println!("{}", grid.iter().map(|ln| format!("{:?}", ln)).join("\n"));
     let gsize = Pos::from_ln_x(grid.len(), grid[0].len());
     let start_pos = find_start(&grid);
     let start_adj = find_connecting_to_start(&grid, start_pos, gsize);
     // rather unidiomatic rust but whatever... (should've / could've used fold_while)
-    let mut dist_map: HashMap<Pos, usize> = HashMap::from([(start_pos, 0), (start_adj[0].1, 1), (start_adj[1].1, 1)]);
+    let mut dist_map: HashMap<Pos, usize> =
+        HashMap::from([(start_pos, 0), (start_adj[0].1, 1), (start_adj[1].1, 1)]);
     let mut curr = start_adj.map(|v| (v, 1));
     loop {
-        if handle_next_node(&grid, &mut curr[0], &mut dist_map, gsize) == LoopControl::Break { break; }
-        if handle_next_node(&grid, &mut curr[1], &mut dist_map, gsize) == LoopControl::Break { break; }
+        if handle_next_node(&grid, &mut curr[0], &mut dist_map, gsize) == LoopControl::Break {
+            break;
+        }
+        if handle_next_node(&grid, &mut curr[1], &mut dist_map, gsize) == LoopControl::Break {
+            break;
+        }
     }
-    dist_map
+    let start_connection_dirns = start_adj.map(|(dirn_from_start, _pos)| dirn_from_start);
+    let start_tile = TileType::from_connector_pair(start_connection_dirns);
+    (grid, dist_map, start_tile)
 }
 
 fn part1() {
     let contents =
         fs::read_to_string("./src/input.txt").expect("Should've been able to read the file");
-    let dist_map = get_loop_dists(&contents);
+    let (_, dist_map, _) = get_loop_dists(&contents);
     // println!("{:?}", dist_map);
-    let m = dist_map.into_iter().max_by_key(|(_pos, dist)| *dist).unwrap();
+    let m = dist_map
+        .into_iter()
+        .max_by_key(|(_pos, dist)| *dist)
+        .unwrap();
     println!("Part 1: {} at {:?}", m.1, m.0);
 }
 
 fn part2() {
     let contents =
         fs::read_to_string("./src/input.txt").expect("Should've been able to read the file");
-    let dist_map = get_loop_dists(&contents);
+    let (grid, dist_map, start_tile_is) = get_loop_dists(&contents);
+    let new_grid = grid
+        .into_iter()
+        .enumerate()
+        .map(|(lni, ln)| {
+            ln.into_iter()
+                .enumerate()
+                .map(|(xi, t)| {
+                    dist_map
+                        .contains_key(&Pos::from_ln_x(lni, xi))
+                        // replace start with appropriate tile
+                        .then_some(if t == TileType::Start { start_tile_is } else { t })
+                        .unwrap_or_default()
+                })
+                .collect_vec()
+        })
+        .collect_vec();
+    
+    
     // TODO: simple solution
     // 1. replace all non-loop places with .
     // 2. Split each cell into 3x3 cell of . (empty) and # (occupied)
@@ -212,4 +308,15 @@ fn part2() {
     // 4. REcursively BFS its neightbours, put reachable places into list
     // 5. Set inside = ALL - loop - outside
     // 6. Return inside
+    // OR:
+    // split each tile into 4 areas (NE, SE, SW, NW)
+
+    // NOTE: A line will always be on a boundary
+
+    // THIS ONE: vvv
+    // OR: the generic (and simpler approach):
+    // for each space, check how many vertical boundary tiles are to its left (only count one that spearate the top half of the tile)
+    // if no. changes is even, outside. Else, inside. Because each boundary change s MUST mean a change in in/out-ness 
+    // so even (0, 2, etc.) means out as 0 is out
+    // This is like casting a ray left from a the top half of the tile, and counting the intersections to determine if a point is inside any polygon.
 }
