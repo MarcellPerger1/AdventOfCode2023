@@ -10,9 +10,12 @@ if [ -z "$1" ]; then
     exit 2
 fi
 
-cargo new "$1" || exit 1
-cd "$1" || exit 1
+ORIG_PWD=$(pwd)
+TARGET_NAME="$1"
+cargo new "$TARGET_NAME" || exit 1
+cd "$TARGET_NAME" || exit 1
 cargo add itertools regex num || exit 1
+cat "$ORIG_PWD/scripts/base_main_file.rs.template" > "./src/main.rs"
 # build packages in both debug and release mode
 cargo run
 cargo run -r
