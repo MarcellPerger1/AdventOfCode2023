@@ -35,7 +35,7 @@ fn parse_states(state_s: &str) -> Vec<State> {
 }
 fn parse_num_list(s: &str) -> impl Iterator<Item = u32> + '_ {
     s.trim()
-        .split_whitespace()
+        .split(',')
         .map(|num_s| num_s.parse().expect("item should be u64"))
 }
 fn parse_line(line: &str) -> Line {
@@ -43,13 +43,24 @@ fn parse_line(line: &str) -> Line {
     Line { states: parse_states(state_s), nums: parse_num_list(nums_s).collect_vec() }
 }
 
+fn matches_states(expected: &Vec<State>, actual: &Vec<State>) -> bool {
+    expected.iter().zip(actual).all(|(exp, act)| *exp == State::Unknown || *exp == *act)
+}
+
+fn handle_line((states, broken_lens): (Vec<State>, Vec<u64>)) -> u64 {
+    // TODO
+    
+    todo!()
+}
+
 fn part1() {
     let contents =
-        fs::read_to_string("./src/input.txt").expect("Should've been able to read the file");
+        fs::read_to_string("./src/example.txt").expect("Should've been able to read the file");
     let lines: Vec<_> = contents
         .lines()
         .map(|x| x.trim())
         .filter(|x| x.len() > 0)
         .collect();
     let lines_v = lines.into_iter().map(parse_line).collect_vec();
+
 }
