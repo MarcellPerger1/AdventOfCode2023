@@ -188,7 +188,7 @@ fn part2() {
     let lines_v = lines.into_iter().map(parse_line).collect_vec();
     let unfolded = lines_v.into_iter().map(|ln| {
         let nums = ln.nums.repeat(5);
-        let states = (0..5).map(|_| ln.states.clone()).intersperse(vec![State::Unknown]).flatten().collect_vec();
+        let states = Itertools::intersperse((0..5).map(|_| ln.states.clone()), vec![State::Unknown]).flatten().collect_vec();
         Line { nums, states }
     }).collect_vec();
     let out: usize = unfolded.iter().map(handle_line).sum();
