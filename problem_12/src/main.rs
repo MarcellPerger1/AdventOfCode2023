@@ -191,7 +191,7 @@ fn part2() {
         let states = (0..5).map(|_| ln.states.clone()).intersperse(vec![State::Unknown]).flatten().collect_vec();
         Line { nums, states }
     }).collect_vec();
-    let out: usize = unfolded.iter().map(handle_line).enumerate().inspect(|(i, _)| println!("{}/1000 Done", i)).map(|(_, v)| v).sum();
+    let out: usize = unfolded.iter().map(handle_line).sum();
     let _ = unfolded;
     println!("Part1: {}", out);
 }
