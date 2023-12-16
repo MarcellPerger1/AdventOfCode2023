@@ -1,9 +1,12 @@
 use itertools::Itertools;
-use std::collections::HashSet;
+use std::sync::Mutex;
 use std::{fs, iter};
+use std::collections::HashMap;
+use lazy_static::lazy_static;
 
 fn main() {
     part1();
+    part2();
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -62,6 +65,26 @@ fn get_combs_nolengths(states: &[State]) -> usize {
     } else {
         0
     }
+}
+
+lazy_static! {
+    static ref CMB_CACHE: Mutex<HashMap<(usize, usize), usize>> = Mutex::new(HashMap::new());
+}
+fn get_combs_cached(states: &[State], lengths: &[usize]) -> usize {
+    // using addresses of the slice as keys is rather sketchy 
+    // but they are all just pointers into a `main`-owned vec
+    // so **SHOULDN'T** be Drop'd until `main` exits so should
+    // stay equivalent as nothing is being cloned
+    // (wait, its all references?? - always has been)
+    let state_ptr = states.as_ptr() as usize;
+    let lengths_ptr = lengths.as_ptr() as usize;
+    if let Some(cached_result) = CMB_CACHE.lock().unwrap().get(&(state_ptr, lengths_ptr)) {
+        return *cached_result;
+    }
+    let result = get_combs(states, lengths);
+    CMB_CACHE.lock().unwrap().insert((state_ptr, lengths_ptr), result);
+    return result;
+
 }
 
 fn get_combs(states: &[State], lengths: &[usize]) -> usize {
@@ -130,13 +153,13 @@ fn get_combs(states: &[State], lengths: &[usize]) -> usize {
             return None;
         }
         let states_rest = &states[end_excl..];
-        Some(get_combs(states_rest, lengths_rest))
+        Some(get_combs_cached(states_rest, lengths_rest))
     });
     possiblities_it.sum()
 }
 
 fn handle_line(line: &Line) -> usize {
-    get_combs(&line.states, &line.nums)
+    get_combs_cached(&line.states, &line.nums)
 }
 
 fn part1() {
@@ -149,5 +172,26 @@ fn part1() {
         .collect();
     let lines_v = lines.into_iter().map(parse_line).collect_vec();
     let out: usize = lines_v.iter().map(handle_line).sum();
+    println!("Part1: {}", out);
+}
+
+fn part2() {
+    // don't need last run's ptrs
+    CMB_CACHE.lock().unwrap().clear();
+    let contents =
+        fs::read_to_string("./src/input.txt").expect("Should've been able to read the file");
+    let lines: Vec<_> = contents
+        .lines()
+        .map(|x| x.trim())
+        .filter(|x| x.len() > 0)
+        .collect();
+    let lines_v = lines.into_iter().map(parse_line).collect_vec();
+    let unfolded = lines_v.into_iter().map(|ln| {
+        let nums = ln.nums.repeat(5);
+        let states = (0..5).map(|_| ln.states.clone()).intersperse(vec![State::Unknown]).flatten().collect_vec();
+        Line { nums, states }
+    }).collect_vec();
+    let out: usize = unfolded.iter().map(handle_line).enumerate().inspect(|(i, _)| println!("{}/1000 Done", i)).map(|(_, v)| v).sum();
+    let _ = unfolded;
     println!("Part1: {}", out);
 }
