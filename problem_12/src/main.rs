@@ -1,8 +1,8 @@
 use itertools::Itertools;
+use lazy_static::lazy_static;
+use std::collections::HashMap;
 use std::sync::Mutex;
 use std::{fs, iter};
-use std::collections::HashMap;
-use lazy_static::lazy_static;
 
 fn main() {
     part1();
@@ -71,7 +71,7 @@ lazy_static! {
     static ref CMB_CACHE: Mutex<HashMap<(usize, usize), usize>> = Mutex::new(HashMap::new());
 }
 fn get_combs_cached(states: &[State], lengths: &[usize]) -> usize {
-    // using addresses of the slice as keys is rather sketchy 
+    // using addresses of the slice as keys is rather sketchy
     // but they are all just pointers into a `main`-owned vec
     // so **SHOULDN'T** be Drop'd until `main` exits so should
     // stay equivalent as nothing is being cloned
@@ -82,9 +82,11 @@ fn get_combs_cached(states: &[State], lengths: &[usize]) -> usize {
         return *cached_result;
     }
     let result = get_combs(states, lengths);
-    CMB_CACHE.lock().unwrap().insert((state_ptr, lengths_ptr), result);
+    CMB_CACHE
+        .lock()
+        .unwrap()
+        .insert((state_ptr, lengths_ptr), result);
     return result;
-
 }
 
 fn get_combs(states: &[State], lengths: &[usize]) -> usize {
@@ -186,12 +188,18 @@ fn part2() {
         .filter(|x| x.len() > 0)
         .collect();
     let lines_v = lines.into_iter().map(parse_line).collect_vec();
-    let unfolded = lines_v.into_iter().map(|ln| {
-        let nums = ln.nums.repeat(5);
-        let states = Itertools::intersperse((0..5).map(|_| ln.states.clone()), vec![State::Unknown]).flatten().collect_vec();
-        Line { nums, states }
-    }).collect_vec();
+    let unfolded = lines_v
+        .into_iter()
+        .map(|ln| {
+            let nums = ln.nums.repeat(5);
+            let states =
+                Itertools::intersperse((0..5).map(|_| ln.states.clone()), vec![State::Unknown])
+                    .flatten()
+                    .collect_vec();
+            Line { nums, states }
+        })
+        .collect_vec();
     let out: usize = unfolded.iter().map(handle_line).sum();
-    let _ = unfolded;
+    let _ = unfolded; // ensure that rust knowns not to Drop `unfolded` until here
     println!("Part1: {}", out);
 }
