@@ -10,7 +10,7 @@ fn main() {
 enum State {
     Normal,
     Broken,
-    Unknown
+    Unknown,
 }
 impl State {
     fn from_char(c: char) -> Self {
@@ -19,7 +19,7 @@ impl State {
             '.' => Normal,
             '#' => Broken,
             '?' => Unknown,
-            _ => panic!("Unknown char fo State::from_char")
+            _ => panic!("Unknown char fo State::from_char"),
         }
     }
 }
@@ -27,7 +27,7 @@ impl State {
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Line {
     states: Vec<State>,
-    nums: Vec<usize>
+    nums: Vec<usize>,
 }
 
 fn parse_states(state_s: &str) -> Vec<State> {
@@ -39,26 +39,38 @@ fn parse_num_list(s: &str) -> impl Iterator<Item = usize> + '_ {
         .map(|num_s| num_s.parse().expect("item should be u64"))
 }
 fn parse_line(line: &str) -> Line {
-    let (state_s, nums_s) = line.split_once(' ').expect("Line should be <springs> <nums>");
-    Line { states: parse_states(state_s), nums: parse_num_list(nums_s).collect_vec() }
+    let (state_s, nums_s) = line
+        .split_once(' ')
+        .expect("Line should be <springs> <nums>");
+    Line {
+        states: parse_states(state_s),
+        nums: parse_num_list(nums_s).collect_vec(),
+    }
 }
 
 fn matches_states(expected_v: &[State], actual_v: &[State]) -> bool {
-    expected_v.iter().zip_eq(actual_v).all(|(expect, actual)| *expect == State::Unknown || *actual == State::Unknown || *expect == *actual)
+    expected_v.iter().zip_eq(actual_v).all(|(expect, actual)| {
+        *expect == State::Unknown || *actual == State::Unknown || *expect == *actual
+    })
 }
 
 fn get_combs_nolengths(states: &[State]) -> usize {
     // no lengths left so the rest must be normal or unknown (i.e. not broken) = 1
     // or if doesn't match, 0
-    if states.iter().all(|s| *s != State::Broken) { 1 } else { 0 }
+    if states.iter().all(|s| *s != State::Broken) {
+        1
+    } else {
+        0
+    }
 }
 
 fn get_combs(states: &[State], lengths: &[usize]) -> usize {
     let (&len_curr, lengths_rest) = match lengths.split_first() {
         None => return get_combs_nolengths(states),
-        Some(v) => v
+        Some(v) => v,
     };
-    if len_curr > states.len() {  // impossible to fulfill so return 0
+    if len_curr > states.len() {
+        // impossible to fulfill so return 0
         return 0;
     }
     if len_curr == states.len() {
@@ -69,23 +81,32 @@ fn get_combs(states: &[State], lengths: &[usize]) -> usize {
             // (this one uses up all the states until the end)
             return 0;
         }
-        let r = if states.iter().all(|s| *s != State::Normal) { 1 } else { 0 };
+        let r = if states.iter().all(|s| *s != State::Normal) {
+            1
+        } else {
+            0
+        };
         return r;
     }
-    let actual_states_sl = [State::Broken].repeat(len_curr).into_iter().chain(iter::once(State::Normal)).collect_vec();
+    let actual_states_sl = [State::Broken]
+        .repeat(len_curr)
+        .into_iter()
+        .chain(iter::once(State::Normal))
+        .collect_vec();
     // start:        0 ..= last_start
     // end-excl:  size ..= len(states)
     // ==> last_start = len(states) - size
     // ALSO, this can't be later than the fist '#' otherwise that would be unfulfilled
-    let first_broken = states.iter()
+    let first_broken = states
+        .iter()
         .find_position(|s| **s == State::Broken)
         .and_then(|(i, _)| Some(i))
-        .unwrap_or(usize::MAX);  // won't be selected by min
-    let starts =  0..=(states.len() - len_curr).min(first_broken);
+        .unwrap_or(usize::MAX); // won't be selected by min
+    let starts = 0..=(states.len() - len_curr).min(first_broken);
     let possiblities_it = starts.filter_map(|start| {
         let end_excl_no_trailing_normal = start + len_curr;
         if end_excl_no_trailing_normal == states.len() {
-            // this is the case where the pattern itself fits, 
+            // this is the case where the pattern itself fits,
             // just the trailing State::Normal is OOB so just don't check for extra normal
             // (there can't be extra Broken's in OOB)
             let end_excl = end_excl_no_trailing_normal;
@@ -102,7 +123,7 @@ fn get_combs(states: &[State], lengths: &[usize]) -> usize {
                 return None;
             }
         }
-        let end_excl = start + len_curr + 1;  // + 1 to include extra normal at end of actual states
+        let end_excl = start + len_curr + 1; // + 1 to include extra normal at end of actual states
         let expected_sl = &states[start..end_excl];
         if !matches_states(expected_sl, &actual_states_sl) {
             // Can't place it here as it would break the states_list
