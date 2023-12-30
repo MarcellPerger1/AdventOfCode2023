@@ -12,7 +12,8 @@
         "./problem_10/Cargo.toml",
         "./problem_11/Cargo.toml",
         "./problem_12/Cargo.toml",
-        ".\\problem_13\\Cargo.toml"
+        ".\\problem_13\\Cargo.toml",
+        ".\\problem_14\\Cargo.toml"
     ],
     "shellcheck.exclude": [
         "1017"
